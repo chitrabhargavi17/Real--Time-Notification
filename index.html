@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Real-Time Notification System</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI,sans-serif}
+body{background:#f4f6f9;transition:.3s}
+body.dark{background:#0f172a;color:#fff}
+.btn{padding:8px 15px;border:none;border-radius:6px;cursor:pointer;background:#2563eb;color:#fff}
+#loginPage{height:100vh;display:flex;justify-content:center;align-items:center}
+.login-box{background:#fff;padding:30px;border-radius:10px;width:350px;box-shadow:0 0 10px rgba(0,0,0,.2)}
+.login-box input,.creator input,.creator select,.controls input,.controls select{width:100%;padding:10px;margin:5px 0;border:1px solid #ccc;border-radius:6px}
+.header{background:#1e293b;color:#fff;padding:15px 25px;display:flex;justify-content:space-between;align-items:center}
+.right{display:flex;gap:10px;align-items:center}
+.bell{position:relative;font-size:28px}
+.badge{position:absolute;top:-8px;right:-8px;background:red;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:12px}
+.container{width:95%;max-width:1400px;margin:20px auto}
+.about,.creator,.notifications,.card{background:#fff;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.1);margin-bottom:20px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;margin-bottom:20px}
+.card{text-align:center}
+.card p{font-size:28px;color:#2563eb;font-weight:bold}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.notification{padding:15px;margin-bottom:10px;border-left:6px solid;border-radius:8px;cursor:pointer}
+.high{border-color:#f59e0b;background:#fff7ed}
+.medium{border-color:#2563eb;background:#eff6ff}
+.low{border-color:#22c55e;background:#f0fdf4}
+.critical{border-color:#ef4444;background:#fef2f2}
+.priority{float:right;background:#000;color:#fff;padding:3px 8px;border-radius:20px;font-size:11px}
+.live{color:#22c55e;font-weight:bold}
+.dark .about,.dark .creator,.dark .notifications,.dark .card{background:#1e293b}
+</style>
+</head>
+<body>
+
+<div id="loginPage">
+<div class="login-box">
+<h2>Login</h2><br>
+<input type="text" id="username" placeholder="Username">
+<input type="password" id="password" placeholder="Password">
+<button class="btn" style="width:100%" onclick="login()">Login</button>
+<p id="loginMsg" style="color:red;margin-top:10px"></p>
+</div>
+</div>
+
+<div id="mainApp" style="display:none">
+
+<div class="header">
+<div><b>🔔 Real-Time Notification System</b></div>
+<div class="right">
+<div class="bell">🔔<span class="badge" id="badge">0</span></div>
+<button class="btn" onclick="markAllRead()">Mark All Read</button>
+<button class="btn" onclick="clearAll()">Clear</button>
+<button class="btn" onclick="toggleTheme()">Dark/Light</button>
+<button class="btn" onclick="logout()">Logout</button>
+</div>
+</div>
+
+<div class="container">
+
+<div class="about">
+<h2>Real-Time Notification System</h2>
+<p>Instant notifications for banking, orders, security, exams, placement updates and more.</p>
+</div>
+
+<div class="cards">
+<div class="card"><h3>Total Notifications</h3><p id="total">0</p></div>
+<div class="card"><h3>Unread</h3><p id="unread">0</p></div>
+<div class="card"><h3>Critical Alerts</h3><p id="critical">0</p></div>
+<div class="card"><h3>Status</h3><p class="live">LIVE</p></div>
+</div>
+
+<div class="creator">
+<h2>Create Notification</h2><br>
+<input type="text" id="newCategory" placeholder="Category">
+<select id="newPriority">
+<option>Low</option>
+<option>Medium</option>
+<option>High</option>
+<option>Critical</option>
+</select>
+<input type="text" id="newMessage" placeholder="Notification Message">
+<button class="btn" onclick="createNotification()">Create Notification</button>
+</div>
+
+<div class="controls">
+<input type="text" id="search" placeholder="Search Notifications" onkeyup="filterNotifications()">
+<select id="category" onchange="filterNotifications()">
+<option value="all">All Categories</option>
+<option value="Banking Alert">Banking Alert</option>
+<option value="Order Notification">Order Notification</option>
+<option value="Security Alert">Security Alert</option>
+<option value="Admin Message">Admin Message</option>
+<option value="Placement Update">Placement Update</option>
+<option value="Exam Notification">Exam Notification</option>
+</select>
+</div>
+
+<div class="notifications">
+<h2>📢 Notification Center</h2><br>
+<div id="notificationList"></div>
+</div>
+
+</div>
+</div>
+
+<script>
+let total=0,unread=0,critical=0;
+
+const notifications=[
+{category:"Banking Alert",priority:"High",message:"₹10,000 debited from your account."},
+{category:"Order Notification",priority:"Medium",message:"Order shipped successfully."},
+{category:"Security Alert",priority:"Critical",message:"New login detected."},
+{category:"Admin Message",priority:"Medium",message:"System update scheduled."},
+{category:"Placement Update",priority:"High",message:"TCS drive announced."},
+{category:"Exam Notification",priority:"High",message:"Exam on July 10."}
+];
+
+function login(){
+let user=document.getElementById("username").value;
+let pass=document.getElementById("password").value;
+if(user==="admin" && pass==="admin123"){
+document.getElementById("loginPage").style.display="none";
+document.getElementById("mainApp").style.display="block";
+}else{
+document.getElementById("loginMsg").innerText="Invalid Username or Password";
+}
+}
+
+function logout(){
+document.getElementById("mainApp").style.display="none";
+document.getElementById("loginPage").style.display="flex";
+}
+
+function updateDashboard(){
+document.getElementById("total").innerText=total;
+document.getElementById("unread").innerText=unread;
+document.getElementById("critical").innerText=critical;
+document.getElementById("badge").innerText=unread;
+}
+
+function addNotification(category,priority,message){
+total++; unread++;
+if(priority==="Critical") critical++;
+updateDashboard();
+
+const div=document.createElement("div");
+div.className="notification "+priority.toLowerCase();
+div.setAttribute("data-category",category);
+div.innerHTML=`<span class="priority">${priority}</span><strong>${category}</strong><p>${message}</p><div>${new Date().toLocaleString()}</div>`;
+
+div.onclick=function(){
+if(!div.classList.contains("read")){
+div.classList.add("read");
+div.style.opacity="0.6";
+unread--;
+updateDashboard();
+}
+};
+document.getElementById("notificationList").prepend(div);
+}
+
+function createNotification(){
+const category=document.getElementById("newCategory").value;
+const priority=document.getElementById("newPriority").value;
+const message=document.getElementById("newMessage").value;
+
+if(category==="" || message===""){
+alert("Enter all fields");
+return;
+}
+
+addNotification(category,priority,message);
+
+document.getElementById("newCategory").value="";
+document.getElementById("newMessage").value="";
+}
+
+function generateNotification(){
+const item=notifications[Math.floor(Math.random()*notifications.length)];
+addNotification(item.category,item.priority,item.message);
+}
+
+function markAllRead(){
+document.querySelectorAll(".notification").forEach(n=>n.style.opacity="0.6");
+unread=0;
+updateDashboard();
+}
+
+function clearAll(){
+document.getElementById("notificationList").innerHTML="";
+total=0; unread=0; critical=0;
+updateDashboard();
+}
+
+function toggleTheme(){
+document.body.classList.toggle("dark");
+}
+
+function filterNotifications(){
+const text=document.getElementById("search").value.toLowerCase();
+const category=document.getElementById("category").value;
+
+document.querySelectorAll(".notification").forEach(n=>{
+const matchText=n.innerText.toLowerCase().includes(text);
+const matchCat=category==="all" || n.getAttribute("data-category")===category;
+n.style.display=(matchText && matchCat)?"block":"none";
+});
+}
+
+setInterval(generateNotification,4000);
+updateDashboard();
+</script>
+
+</body>
+</html>
